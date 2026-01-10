@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Downloader</title>
+    <style>
+        body { font-family: Arial; margin: 0; padding: 20px; background: #f0f2f5; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        .tabs { display: flex; margin-bottom: 30px; }
+        .tab { flex: 1; padding: 15px; text-align: center; background: #f8f9fa; border: 1px solid #ddd; cursor: pointer; }
+        .tab.active { background: #007bff; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin: 20px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { padding: 12px; font-size: 16px; width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; margin-top: 15px; }
+        button:hover { background: #0056b3; }
+        .mode-btn { width: auto; margin: 0; padding: 8px 16px; background: #f8f9fa; color: #333; border: 1px solid #ddd; }
+        .mode-btn.active { background: #007bff; color: white; }
+        .mode-btn:hover { background: #e9ecef; }
+        .mode-btn.active:hover { background: #0056b3; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .loading { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Video Downloader</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('youtube')">📺 YouTube</div>
+            <div class="tab" onclick="showTab('instagram')">📷 Instagram</div>
+        </div>
+        
+        <!-- YouTube Tab -->
+        <div id="youtube" class="tab-content active">
+            <div class="form-group">
+                <label>Download Mode:</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button type="button" id="video-mode" class="mode-btn active" onclick="toggleYouTubeMode('video')">Single Video</button>
+                    <button type="button" id="playlist-mode" class="mode-btn" onclick="toggleYouTubeMode('playlist')">Playlist</button>
+                </div>
+            </div>
+            
+            <div id="video-form">
+                <div class="form-group">
+                    <label for="youtube_url">YouTube URL:</label>
+                    <input type="url" id="youtube_url" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="youtube_quality">Quality:</label>
+                    <select id="youtube_quality">
+                        <option value="best">Best Quality</option>
+                        <option value="720p">720p</option>
+                        <option value="480p">480p</option>
+                        <option value="360p">360p</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="youtube_format">Format:</label>
+                    <select id="youtube_format">
+                        <option value="mp4">MP4 (Video)</option>
+                        <option value="mp3">MP3 (Audio Only)</option>
+                        <option value="webm">WebM</option>
+                    </select>
+                </div>
+                
+                <button onclick="downloadYoutube()">Download YouTube Video</button>
+            </div>
+            
+            <div id="playlist-form" style="display: none;">
+                <div class="form-group">
+                    <label for="youtube_playlist_url">YouTube Playlist URL:</label>
+                    <input type="url" id="youtube_playlist_url" placeholder="https://www.youtube.com/playlist?list=...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="playlist_quality">Quality:</label>
+                    <select id="playlist_quality">
+                        <option value="best">Best Quality</option>
+                        <option value="720p">720p</option>
+                        <option value="480p">480p</option>
+                        <option value="360p">360p</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="playlist_format">Format:</label>
+                    <select id="playlist_format">
+                        <option value="mp4">MP4 (Video)</option>
+                        <option value="mp3">MP3 (Audio Only)</option>
+                        <option value="webm">WebM</option>
+                    </select>
+                </div>
+                
+                <button onclick="downloadYouTubePlaylist()">Download YouTube Playlist</button>
+            </div>
+        </div>
+        
+        <!-- Instagram Tab -->
+        <div id="instagram" class="tab-content">
+            <div class="form-group">
+                <label>Download Mode:</label>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button type="button" id="profile-mode" class="mode-btn active" onclick="toggleInstagramMode('profile')">Profile</button>
+                    <button type="button" id="post-mode" class="mode-btn" onclick="toggleInstagramMode('post')">Single Post</button>
+                </div>
+            </div>
+            
+            <div id="profile-form">
+                <div class="form-group">
+                    <label for="instagram_username">Instagram Username:</label>
+                    <input type="text" id="instagram_username" placeholder="username">
+                </div>
+                
+                <div class="form-group">
+                    <label for="instagram_count">Number of Videos:</label>
+                    <input type="number" id="instagram_count" value="5" min="1" max="50">
+                </div>
+                
+                <button onclick="downloadInstagram()">Download Instagram Videos</button>
+            </div>
+            
+            <div id="post-form" style="display: none;">
+                <div class="form-group">
+                    <label for="instagram_post_url">Instagram Post URL:</label>
+                    <input type="text" id="instagram_post_url" placeholder="https://www.instagram.com/p/...">
+                </div>
+                
+                <button onclick="downloadInstagramPost()">Download Single Post</button>
+            </div>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleInstagramMode(mode) {
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'profile') {
+                document.getElementById('profile-mode').classList.add('active');
+                document.getElementById('profile-form').style.display = 'block';
+                document.getElementById('post-form').style.display = 'none';
+            } else {
+                document.getElementById('post-mode').classList.add('active');
+                document.getElementById('profile-form').style.display = 'none';
+                document.getElementById('post-form').style.display = 'block';
+            }
+        }
+
+        function toggleYouTubeMode(mode) {
+            document.querySelectorAll('#youtube .mode-btn').forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'video') {
+                document.getElementById('video-mode').classList.add('active');
+                document.getElementById('video-form').style.display = 'block';
+                document.getElementById('playlist-form').style.display = 'none';
+            } else {
+                document.getElementById('playlist-mode').classList.add('active');
+                document.getElementById('video-form').style.display = 'none';
+                document.getElementById('playlist-form').style.display = 'block';
+            }
+        }
+
+        async function downloadYoutube() {
+            const url = document.getElementById('youtube_url').value;
+            const quality = document.getElementById('youtube_quality').value;
+            const format = document.getElementById('youtube_format').value;
+            const result = document.getElementById('result');
+            
+            if (!url) {
+                result.innerHTML = '<div class="error">Please enter a YouTube URL</div>';
+                return;
+            }
+            
+            result.innerHTML = '<div class="loading">Downloading YouTube video...</div>';
+            
+            try {
+                const response = await fetch('/download_youtube', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url, quality, format})
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = `video.${format}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+                    result.innerHTML = '<div class="success">✅ YouTube video downloaded!</div>';
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `<div class="error">❌ Error: ${error.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function downloadInstagram() {
+            const username = document.getElementById('instagram_username').value;
+            const count = document.getElementById('instagram_count').value;
+            const result = document.getElementById('result');
+            
+            if (!username) {
+                result.innerHTML = '<div class="error">Please enter an Instagram username</div>';
+                return;
+            }
+            
+            result.innerHTML = '<div class="loading">Downloading Instagram videos...</div>';
+            
+            try {
+                const response = await fetch('/download_instagram', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, count: parseInt(count)})
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = `${username}_videos.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+                    result.innerHTML = '<div class="success">✅ Instagram videos downloaded!</div>';
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `<div class="error">❌ Error: ${error.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function downloadInstagramPost() {
+            const postUrl = document.getElementById('instagram_post_url').value;
+            const result = document.getElementById('result');
+            
+            if (!postUrl) {
+                result.innerHTML = '<div class="error">Please enter an Instagram post URL</div>';
+                return;
+            }
+            
+            result.innerHTML = '<div class="loading">Downloading Instagram post...</div>';
+            
+            try {
+                const response = await fetch('/download_instagram_post', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({post_url: postUrl})
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const downloadUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'instagram_post.mp4';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(downloadUrl);
+                    document.body.removeChild(a);
+                    result.innerHTML = '<div class="success">✅ Instagram post downloaded!</div>';
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `<div class="error">❌ Error: ${error.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function downloadYouTubePlaylist() {
+            const url = document.getElementById('youtube_playlist_url').value;
+            const quality = document.getElementById('playlist_quality').value;
+            const format = document.getElementById('playlist_format').value;
+            const result = document.getElementById('result');
+            
+            if (!url) {
+                result.innerHTML = '<div class="error">Please enter a YouTube playlist URL</div>';
+                return;
+            }
+            
+            result.innerHTML = '<div class="loading">Starting playlist download...</div>';
+            
+            try {
+                const response = await fetch('/download_youtube_playlist', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: url, quality: quality, format: format})
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const taskId = data.task_id;
+                    
+                    // Poll for progress updates
+                    const pollProgress = async () => {
+                        try {
+                            const progressResponse = await fetch(`/progress/${taskId}`);
+                            const progress = await progressResponse.json();
+                            
+                            if (progress.status === 'starting') {
+                                result.innerHTML = '<div class="loading">Analyzing playlist...</div>';
+                            } else if (progress.status === 'downloading') {
+                                result.innerHTML = `<div class="loading">Downloading: ${progress.current}/${progress.total} videos</div>`;
+                            } else if (progress.status === 'zipping') {
+                                result.innerHTML = '<div class="loading">Creating zip file...</div>';
+                            } else if (progress.status === 'ready') {
+                                result.innerHTML = `<div class="success">✅ Downloaded ${progress.current}/${progress.total} videos!</div>`;
+                                
+                                // Download the file
+                                const a = document.createElement('a');
+                                a.href = `/download_file/${taskId}`;
+                                a.download = 'youtube_playlist.zip';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                return;
+                            } else if (progress.status === 'error') {
+                                result.innerHTML = `<div class="error">❌ Error: ${progress.message}</div>`;
+                                return;
+                            }
+                            
+                            // Continue polling
+                            setTimeout(pollProgress, 1000);
+                        } catch (error) {
+                            result.innerHTML = '<div class="error">❌ Connection error</div>';
+                        }
+                    };
+                    
+                    pollProgress();
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `<div class="error">❌ Error: ${error.error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
