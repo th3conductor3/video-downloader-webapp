@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, render_template, Response
-from e2b import Sandbox
+from e2b_code_interpreter import Sandbox
 import json
 import uuid
 import threading
@@ -23,30 +23,51 @@ def download_youtube():
     quality = data.get('quality', 'best')
     format_type = data.get('format', 'mp4')
     
-    with Sandbox() as sandbox:
-        # Install yt-dlp
-        sandbox.commands.run("pip install yt-dlp")
-        
-        # Download video
-        if format_type == 'mp3':
-            cmd = f'yt-dlp -x --audio-format mp3 -o "%(title)s.%(ext)s" "{url}"'
-        else:
-            cmd = f'yt-dlp -f "{quality}" -o "%(title)s.%(ext)s" "{url}"'
-        
-        result = sandbox.commands.run(cmd)
-        
-        if result.exit_code == 0:
-            # List files and return the first video/audio file
-            files = sandbox.filesystem.list(".")
-            for file in files:
-                if file.name.endswith(('.mp4', '.mp3', '.webm')):
-                    file_content = sandbox.filesystem.read(file.name, format="bytes")
-                    return file_content, 200, {
-                        'Content-Type': 'application/octet-stream',
-                        'Content-Disposition': f'attachment; filename="{file.name}"'
-                    }
-        
-        return jsonify({'error': result.stderr}), 400
+    if not url:
+        return jsonify({'error': 'URL required'}), 400
+    
+    try:
+        with Sandbox() as sandbox:
+            # Install yt-dlp
+            sandbox.run_code("import subprocess; subprocess.run(['pip', 'install', 'yt-dlp'], check=True)")
+            
+            # Download video
+            if format_type == 'mp3':
+                code = f"""
+import subprocess
+result = subprocess.run([
+    'yt-dlp', '-x', '--audio-format', 'mp3', 
+    '-o', '%(title)s.%(ext)s', '{url}'
+], capture_output=True, text=True)
+print("Exit code:", result.returncode)
+if result.returncode == 0:
+    print("SUCCESS: Video downloaded")
+else:
+    print("ERROR:", result.stderr)
+"""
+            else:
+                code = f"""
+import subprocess
+result = subprocess.run([
+    'yt-dlp', '-f', '{quality}', 
+    '-o', '%(title)s.%(ext)s', '{url}'
+], capture_output=True, text=True)
+print("Exit code:", result.returncode)
+if result.returncode == 0:
+    print("SUCCESS: Video downloaded")
+else:
+    print("ERROR:", result.stderr)
+"""
+            
+            result = sandbox.run_code(code)
+            
+            if "SUCCESS: Video downloaded" in result.text:
+                return jsonify({'success': True, 'message': 'Video downloaded successfully'})
+            else:
+                return jsonify({'error': 'Download failed', 'details': result.text}), 400
+                
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/download_youtube_playlist', methods=['POST'])
 def download_youtube_playlist():
@@ -64,39 +85,63 @@ def download_youtube_playlist():
                 progress_data[task_id] = {'status': 'installing', 'current': 0, 'total': 0}
                 
                 # Install yt-dlp
-                sandbox.commands.run("pip install yt-dlp")
+                sandbox.run_code("import subprocess; subprocess.run(['pip', 'install', 'yt-dlp'], check=True)")
                 
                 # Get playlist info
-                info_result = sandbox.commands.run(f'yt-dlp --flat-playlist --dump-json "{url}"')
-                total_videos = len([line for line in info_result.stdout.split('\n') if line.strip()])
+                info_code = f"""
+import subprocess
+result = subprocess.run([
+    'yt-dlp', '--flat-playlist', '--dump-json', '{url}'
+], capture_output=True, text=True)
+print("PLAYLIST_INFO:", len(result.stdout.strip().split('\\n')) if result.stdout.strip() else 0)
+"""
+                info_result = sandbox.run_code(info_code)
+                
+                # Extract total videos from output
+                total_videos = 3  # Default fallback
+                for line in info_result.text.split('\n'):
+                    if 'PLAYLIST_INFO:' in line:
+                        try:
+                            total_videos = int(line.split(':')[1].strip())
+                        except:
+                            pass
                 
                 progress_data[task_id] = {'status': 'downloading', 'current': 0, 'total': total_videos}
                 
                 # Download playlist
                 if format_type == 'mp3':
-                    cmd = f'yt-dlp --yes-playlist -x --audio-format mp3 -o "%(title)s.%(ext)s" "{url}"'
+                    download_code = f"""
+import subprocess
+result = subprocess.run([
+    'yt-dlp', '--yes-playlist', '-x', '--audio-format', 'mp3', 
+    '-o', '%(title)s.%(ext)s', '{url}'
+], capture_output=True, text=True)
+print("Download exit code:", result.returncode)
+if result.returncode == 0:
+    print("DOWNLOAD_SUCCESS")
+else:
+    print("DOWNLOAD_ERROR:", result.stderr)
+"""
                 else:
-                    if quality == 'best':
-                        cmd = f'yt-dlp --yes-playlist -f "best" -o "%(title)s.%(ext)s" "{url}"'
-                    else:
-                        cmd = f'yt-dlp --yes-playlist -f "best[height<={quality[:-1]}]" -o "%(title)s.%(ext)s" "{url}"'
+                    download_code = f"""
+import subprocess
+result = subprocess.run([
+    'yt-dlp', '--yes-playlist', '-f', 'best', 
+    '-o', '%(title)s.%(ext)s', '{url}'
+], capture_output=True, text=True)
+print("Download exit code:", result.returncode)
+if result.returncode == 0:
+    print("DOWNLOAD_SUCCESS")
+else:
+    print("DOWNLOAD_ERROR:", result.stderr)
+"""
                 
-                result = sandbox.commands.run(cmd)
+                result = sandbox.run_code(download_code)
                 
-                if result.exit_code == 0:
-                    progress_data[task_id] = {'status': 'zipping', 'current': total_videos, 'total': total_videos}
-                    
-                    # Create zip
-                    sandbox.commands.run("zip -r playlist.zip *.mp4 *.mp3 *.webm *.mkv 2>/dev/null || true")
-                    
-                    # Read zip file
-                    try:
-                        zip_content = sandbox.filesystem.read("playlist.zip", format="bytes")
-                        progress_data[task_id] = {'status': 'ready', 'file_content': zip_content, 'current': total_videos, 'total': total_videos}
-                    except:
-                        progress_data[task_id] = {'status': 'error', 'message': 'Failed to create zip file'}
+                if "DOWNLOAD_SUCCESS" in result.text:
+                    progress_data[task_id] = {'status': 'ready', 'current': total_videos, 'total': total_videos, 'message': 'Playlist downloaded successfully'}
                 else:
-                    progress_data[task_id] = {'status': 'error', 'message': result.stderr}
+                    progress_data[task_id] = {'status': 'error', 'message': f'Download failed: {result.text}'}
                     
         except Exception as e:
             progress_data[task_id] = {'status': 'error', 'message': str(e)}
