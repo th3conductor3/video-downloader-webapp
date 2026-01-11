@@ -1,1 +1,1 @@
-web: python e2b_app.py
+web: python app.py
